@@ -1,0 +1,38 @@
+---
+- name: Generate private key for {{ item }}
+  ansible.builtin.command:
+    cmd: wg genkey
+  register: peer_private_key
+
+- name: Generate public key for {{ item }}
+  ansible.builtin.shell:
+    cmd: echo {{ peer_private_key.stdout }} | wg pubkey
+  register: peer_public_key
+
+- name: Generate preshare key for {{ item }}
+  ansible.builtin.command:
+    cmd: wg genkey
+  register: peer_preshare_key
+
+- name: Create wireguard peer configuration for {{ item }}
+  ansible.builtin.template:
+    src: wg-peer.conf.j2
+    dest: "{{ wg_conf_export_dir }}/{{ item }}/{{ wg_peer_wgint }}-peer.conf"
+    mode: 0600
+
+- name: Generate wireguard peer configuration QR code for {{ item }}
+  ansible.builtin.command:
+    cmd: qrencode -t png -r {{ wg_peer_wgint }}-peer.conf -o {{ wg_peer_wgint }}-peer.png
+    chdir: "{{ wg_conf_export_dir }}/{{ item }}"
+
+- name: Create wireguard peer configuration part for {{ item }}
+  ansible.builtin.template:
+    src: wg-peer-server-part.conf.j2
+    dest: "{{ wg_conf_export_dir }}/{{ item }}/{{ wg_peer_wgint }}-peer-server-part.conf"
+    mode: 0600
+
+- name: Create wireguard hass.io peer configuration part for {{ item }}
+  ansible.builtin.template:
+    src: wg-hassio-peer-part.conf.j2
+    dest: "{{ wg_conf_export_dir }}/{{ item }}/{{ wg_peer_wgint }}-peer-hassio-part.conf"
+    mode: 0600

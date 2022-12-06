@@ -1,0 +1,12 @@
+[Interface]
+Address = {{ item }}/32
+{% if wg_peer_dns is defined %}
+DNS = {{ wg_peer_dns }}
+{% endif %}
+PrivateKey = {{ peer_private_key.stdout }}
+
+[Peer]
+PublicKey = {{ wg_server_publickey.stdout }}
+PresharedKey = {{ peer_preshare_key.stdout }}
+Endpoint = {{ wg_server_externalip }}:{{ wg_server_listenport }}
+AllowedIPs = {{ wg_allowed_ips }}

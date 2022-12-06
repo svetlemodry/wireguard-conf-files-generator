@@ -1,0 +1,78 @@
+---
+- name: Simple wireguard VPN configuration files generator
+  hosts: localhost
+  gather_facts: no
+  become: no
+
+  vars:
+# either fill in the current server private key if you just want to add new peers
+# or generate a new server private key with `wg genkey` and insert the result here
+    wg_server_privatekey:
+# export directory for the created config files
+    wg_conf_export_dir: ./wireguard-config-files
+
+# server external IP or FQDN
+    wg_server_externalip: 1.2.3.4
+# server vpn network address
+    wg_server_address: 172.27.66.1
+# wireguard listen port
+    wg_server_listenport: 51820
+# server vpn network interface
+    wg_server_wgint: wg0
+# server physical network interface
+    wg_server_ethint: enp0s25
+
+# vpn addresses of peers, add/remove as many as you need
+    wg_peer_address:
+      - 172.27.66.2
+      - 172.27.66.3
+
+# vpn network interface of peer
+    wg_peer_wgint: wg0
+# optional dns server used by peers if connected via wireguard
+    wg_peer_dns: 172.30.32.1
+# all traffic through the tunnel with 0.0.0.0/0, ::0
+    wg_allowed_ips: 0.0.0.0/0, ::0
+
+
+  tasks:
+  - name: Create the export directory at {{ wg_conf_export_dir }} if missing
+    ansible.builtin.file:
+      path: "{{ wg_conf_export_dir }}/{{ item }}"
+      state: directory
+      mode: '0755'
+    loop: "{{ wg_peer_address }}"
+
+  - name: Generate wireguard server publickey from server privatekey
+    ansible.builtin.shell:
+      cmd: set -o pipefail && echo "{{ wg_server_privatekey }}" | wg pubkey
+    register: wg_server_publickey
+
+  - name: Generate all the peer config files
+    ansible.builtin.include_tasks:
+      file: tasks/wireguard-generate-peer-data.yml
+    loop: "{{ wg_peer_address }}"
+
+  - name: Create wireguard server configuration part
+    ansible.builtin.template:
+      src: wg-server-part.conf.j2
+      dest: "{{ wg_conf_export_dir }}/{{ wg_server_wgint }}-server.conf"
+      mode: 0600
+
+  - name: Finalize wireguard server configuration
+    ansible.builtin.shell:
+      cmd: cat {{ item }}/{{ wg_peer_wgint }}-peer-server-part.conf >> {{ wg_server_wgint }}-server.conf
+      chdir: "{{ wg_conf_export_dir }}"
+    loop: "{{ wg_peer_address }}"
+
+  - name: Create wireguard hass.io server configuration part
+    ansible.builtin.template:
+      src: wg-hassio-server-part.conf.j2
+      dest: "{{ wg_conf_export_dir }}/{{ wg_server_wgint }}-hassio.conf"
+      mode: 0600
+
+  - name: Finalize wireguard hass.io server configuration
+    ansible.builtin.shell:
+      cmd: cat {{ item }}/{{ wg_peer_wgint }}-peer-hassio-part.conf >> {{ wg_server_wgint }}-hassio.conf
+      chdir: "{{ wg_conf_export_dir }}"
+    loop: "{{ wg_peer_address }}"

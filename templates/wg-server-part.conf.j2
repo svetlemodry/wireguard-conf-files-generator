@@ -1,0 +1,9 @@
+[Interface]
+Address = {{ wg_server_address }}/24
+ListenPort = {{ wg_server_listenport }}
+PrivateKey = {{ wg_server_privatekey }}
+{% if wg_server_publickey.stdout is defined %}
+#PublicKey = {{ wg_server_publickey.stdout }}
+{% endif %}
+PostUp = iptables -A FORWARD -i {{ wg_server_wgint }} -j ACCEPT; iptables -t nat -A POSTROUTING -o {{ wg_server_ethint }} -j MASQUERADE
+PostDown = iptables -D FORWARD -i {{ wg_server_wgint }} -j ACCEPT; iptables -t nat -D POSTROUTING -o {{ wg_server_ethint }} -j MASQUERADE

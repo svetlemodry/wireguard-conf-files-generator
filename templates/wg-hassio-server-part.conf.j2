@@ -1,0 +1,12 @@
+server:
+  addresses:
+    - {{ wg_server_address }}
+{% if wg_peer_dns is defined %}
+  dns:
+    - {{ wg_peer_dns }}
+{% endif %}
+  host: {{ wg_server_externalip }}
+  private_key: {{ wg_server_privatekey }}
+  public_key: {{ wg_server_publickey.stdout }}
+
+peers:

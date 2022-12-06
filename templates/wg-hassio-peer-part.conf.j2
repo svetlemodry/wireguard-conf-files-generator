@@ -1,0 +1,7 @@
+- name: {{ item }}-RENAME-IF-NEEDED
+    addresses:
+      - {{ item }}
+    public_key: {{ peer_public_key.stdout }}
+    pre_shared_key: {{ peer_preshare_key.stdout }}
+    allowed_ips: []
+    client_allowed_ips: []
